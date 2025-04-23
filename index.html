@@ -19,14 +19,12 @@
     (function() {
       // CONFIG
       const NUM_BOIDS       = 1000;
-      const MAX_SPEED       = 4;
+      const MAX_SPEED       = 1.2;
       const NEIGHBOR_RADIUS = 15;
       const SEPARATION_W    = 0.1;
       const COHESION_W      = 0.002;
       const ALIGNMENT_W     = 0.05;
       const PIXEL_COLOR     = '#161513';
-      const PIXEL_SIZE      = 2;    // size of each "pixel" boid
-      const TRAIL_ALPHA     = 0.3;  // opacity of background fade (0 = infinite trail, 1 = no trail)
 
       // VECTOR HELPERS
       function vec(x=0, y=0)   { return { x, y }; }
@@ -52,7 +50,7 @@
       class Boid {
         constructor() {
           this.pos = vec(Math.random() * W, Math.random() * H);
-          this.vel = vec((Math.random()*2 - 1) * MAX_SPEED, (Math.random()*2 - 1) * MAX_SPEED);
+          this.vel = vec((Math.random()*2-1)*MAX_SPEED, (Math.random()*2-1)*MAX_SPEED);
         }
         flock(others) {
           let sep = vec(), coh = vec(), ali = vec(), count = 0;
@@ -88,12 +86,11 @@
           this.pos = add(this.pos, this.vel);
         }
         draw(ctx) {
-          // Draw as PIXEL_SIZE x PIXEL_SIZE square
+          // Draw as single pixel
           ctx.fillRect(
             Math.floor(this.pos.x),
             Math.floor(this.pos.y),
-            PIXEL_SIZE,
-            PIXEL_SIZE
+            1, 1
           );
         }
       }
@@ -103,7 +100,7 @@
 
       function animate() {
         // Faint trail: semi-transparent fill instead of clearRect
-        ctx.fillStyle = `rgba(239,238,236,${TRAIL_ALPHA})`;
+        ctx.fillStyle = 'rgba(239,238,236,0.1)';
         ctx.fillRect(0, 0, W, H);
 
         ctx.fillStyle = PIXEL_COLOR;
