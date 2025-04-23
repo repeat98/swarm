@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixel-ated 2D Swarm</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #EFEEEC;
+      overflow: hidden;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="swarm"></canvas>
+  <script>
+    (function() {
+      // CONFIG
+      const NUM_BOIDS       = 1000;
+      const MAX_SPEED       = 1.2;
+      const NEIGHBOR_RADIUS = 15;
+      const SEPARATION_W    = 0.1;
+      const COHESION_W      = 0.002;
+      const ALIGNMENT_W     = 0.05;
+      const PIXEL_COLOR     = '#161513';
+
+      // VECTOR HELPERS
+      function vec(x=0, y=0)   { return { x, y }; }
+      function add(a, b)       { return { x: a.x + b.x, y: a.y + b.y }; }
+      function sub(a, b)       { return { x: a.x - b.x, y: a.y - b.y }; }
+      function mul(v, s)       { return { x: v.x * s, y: v.y * s }; }
+      function div(v, s)       { return { x: v.x / s, y: v.y / s }; }
+      function len(v)          { return Math.hypot(v.x, v.y); }
+      function normalize(v)    { const l = len(v) || 1; return { x: v.x/l, y: v.y/l }; }
+      function limit(v, max)   { const l = len(v); return l > max ? mul(normalize(v), max) : v; }
+
+      // SETUP
+      const canvas = document.getElementById('swarm');
+      const ctx    = canvas.getContext('2d');
+      let W, H;
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      class Boid {
+        constructor() {
+          this.pos = vec(Math.random() * W, Math.random() * H);
+          this.vel = vec((Math.random()*2-1)*MAX_SPEED, (Math.random()*2-1)*MAX_SPEED);
+        }
+        flock(others) {
+          let sep = vec(), coh = vec(), ali = vec(), count = 0;
+          for (let o of others) {
+            const d = len(sub(this.pos, o.pos));
+            if (d > 0 && d < NEIGHBOR_RADIUS) {
+              // Separation: push away inversely by distance
+              const away = normalize(sub(this.pos, o.pos));
+              sep = add(sep, mul(away, 1 / d));
+              // Cohesion & Alignment sums
+              coh = add(coh, o.pos);
+              ali = add(ali, o.vel);
+              count++;
+            }
+          }
+          if (count > 0) {
+            coh = normalize(sub(div(coh, count), this.pos));
+            ali = normalize(div(ali, count));
+            sep = normalize(sep);
+            this.vel = add(this.vel, mul(sep, SEPARATION_W));
+            this.vel = add(this.vel, mul(coh,    COHESION_W));
+            this.vel = add(this.vel, mul(ali,    ALIGNMENT_W));
+          }
+        }
+        update() {
+          // Wrap around edges
+          if      (this.pos.x < 0)   this.pos.x += W;
+          else if (this.pos.x > W)   this.pos.x -= W;
+          if      (this.pos.y < 0)   this.pos.y += H;
+          else if (this.pos.y > H)   this.pos.y -= H;
+          // Limit speed and step
+          this.vel = limit(this.vel, MAX_SPEED);
+          this.pos = add(this.pos, this.vel);
+        }
+        draw(ctx) {
+          // Draw as single pixel
+          ctx.fillRect(
+            Math.floor(this.pos.x),
+            Math.floor(this.pos.y),
+            1, 1
+          );
+        }
+      }
+
+      // Create boids
+      const boids = Array.from({ length: NUM_BOIDS }, () => new Boid());
+
+      function animate() {
+        // Faint trail: semi-transparent fill instead of clearRect
+        ctx.fillStyle = 'rgba(239,238,236,0.1)';
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = PIXEL_COLOR;
+        // Flocking forces
+        for (let b of boids) b.flock(boids);
+        // Update & draw
+        for (let b of boids) {
+          b.update();
+          b.draw(ctx);
+        }
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    })();
+  </script>
+</body>
+</html>
